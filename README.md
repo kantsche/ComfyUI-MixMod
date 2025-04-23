@@ -116,6 +116,12 @@ Here's a simple workflow to mix two models:
 - Experiment with different CFG values for each model to control its influence
 - For models with very different styles, start with lower weights for specialty models
 
+Example with Ponyv6 and NoobAI:
+
+Only Pony, Pony+Noob, Only Noob
+![image](https://github.com/user-attachments/assets/0108c1e4-bf3c-4060-9860-47ae8a52b627)
+
+
 ## Credits
 
 Created by Kantsche
