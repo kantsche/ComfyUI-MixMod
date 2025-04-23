@@ -9,6 +9,7 @@ A custom node extension for ComfyUI that allows mixing multiple models during th
 ComfyUI-MixMod provides a powerful way to combine multiple models during stable diffusion sampling. This extension introduces two primary mixing modes:
 
 - **Team Mode**: Combines multiple models by weighted averaging of their predictions and applying their respective guidance scales.
+- If the models disagree on tags and prompts it will get bad, you have to prompt so both model are roughly on one page.
 - **2Model FFT Mode**: (EXPERIMENTAL) Splits the frequency domain between two models, using one model for low frequencies and another for high frequencies.
 
 ## Features
