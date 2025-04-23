@@ -61,7 +61,7 @@ class MixModFFTGuiderNode:
     def INPUT_TYPES(s):
         return {"required": 
                     {"component": ("COMPONENT",),
-                     "mode": (["teamfft", "2model_fft"]),
+                     "mode": (["teamfft", "2model_fft"],),
                      "ratio": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                     }
                 }
