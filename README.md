@@ -22,6 +22,8 @@ ComfyUI-MixMod provides a powerful way to combine multiple models during stable 
 ## Roadmap
 
 - Add more modes
+- Better lora support
+- Make it upscale better/ fix resolution
 - Make this work with SD1.5, Flux and other models
 
 ## Installation
