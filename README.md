@@ -2,7 +2,7 @@
 
 A custom node extension for ComfyUI that allows mixing multiple models during the sampling process for enhanced image generation.
 
-##Please share workflows or good combinations here!
+## Please share workflows or good combinations here!
 
 ## Description
 
