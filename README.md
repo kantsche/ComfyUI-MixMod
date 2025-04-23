@@ -2,6 +2,8 @@
 
 A custom node extension for ComfyUI that allows mixing multiple models during the sampling process for enhanced image generation.
 
+##Please share workflows or good combinations here!
+
 ## Description
 
 ComfyUI-MixMod provides a powerful way to combine multiple models during stable diffusion sampling. This extension introduces two primary mixing modes:
@@ -16,6 +18,11 @@ ComfyUI-MixMod provides a powerful way to combine multiple models during stable 
 - Set individual guidance scales (CFG) for each model
 - Frequency domain splitting for controlling different image characteristics
 - Chain multiple components together to create complex model combinations
+
+## Roadmap
+
+- Add more modes
+- Make this work with SD1.5, Flux and other models
 
 ## Installation
 
