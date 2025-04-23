@@ -6,6 +6,8 @@ A custom node extension for ComfyUI that allows mixing multiple models during th
 
 ## Description
 
+VRAM requirement: Fitting two or multiple models. I think around 12gb is minimum for two sdxl.
+
 ComfyUI-MixMod provides a powerful way to combine multiple models during stable diffusion sampling. This extension introduces two primary mixing modes:
 
 - **Team Mode**: Combines multiple models by weighted averaging of their predictions and applying their respective guidance scales.
