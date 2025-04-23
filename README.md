@@ -10,7 +10,7 @@ ComfyUI-MixMod provides a powerful way to combine multiple models during stable 
 
 - **Team Mode**: Combines multiple models by weighted averaging of their predictions and applying their respective guidance scales.
 - If the models disagree on tags and prompts it will get bad, you have to prompt so both model are roughly on one page.
-- **2Model FFT Mode**: (EXPERIMENTAL) Splits the frequency domain between two models, using one model for low frequencies and another for high frequencies.
+- **2Model FFT Mode**: (EXPERIMENTAL) Splits the frequency domain between two models, using one model for low frequencies and another for high frequencies. Last model in the chain decides the split weight.
 
 ## Features
 
