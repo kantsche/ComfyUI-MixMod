@@ -22,7 +22,7 @@ class MixModGuiderComponentNode:
 
     RETURN_TYPES = ("COMPONENT",)
     FUNCTION = "create_component"
-    CATEGORY = "mixmod/conditioning"
+    CATEGORY = "mixmod/components"
 
     def create_component(self, model, positive, negative, base_weight, cfg, options=None, prev_component=None):
         component = {
@@ -55,7 +55,7 @@ class MixModGuiderComponentPipelineNode:
 
     RETURN_TYPES = ("COMPONENT",)
     FUNCTION = "create_component"
-    CATEGORY = "mixmod/conditioning"
+    CATEGORY = "mixmod/components"
 
     def create_component(self, pipeline, base_weight, cfg, options=None, prev_component=None):
         component = {
@@ -82,7 +82,7 @@ class MixModPipelineNode:
     
     RETURN_TYPES = ("PIPELINE",)
     FUNCTION = "create_pipeline"
-    CATEGORY = "mixmod/conditioning"
+    CATEGORY = "mixmod/components"
 
     def create_pipeline(self, model, positive, negative):
         pipeline = {
@@ -103,7 +103,7 @@ class MixModGuiderNode:
 
     RETURN_TYPES = ("GUIDER",)
     FUNCTION = "create_guider"
-    CATEGORY = "mixmod/conditioning"
+    CATEGORY = "mixmod/components"
 
     def create_guider(self, component):
         # This is a placeholder for the actual guider implementation
@@ -127,7 +127,7 @@ class MixModOptionsUncondDecayNode:
 
     RETURN_TYPES = ("OPTIONS",)
     FUNCTION = "options"
-    CATEGORY = "mixmod/conditioning"
+    CATEGORY = "mixmod/options"
 
     def options(self, uncond_decay, prev_options=None): 
         options = {
@@ -150,7 +150,7 @@ class MixModOptionsMaskNode:
 
     RETURN_TYPES = ("OPTIONS",)
     FUNCTION = "options"
-    CATEGORY = "mixmod/conditioning"
+    CATEGORY = "mixmod/options"
 
     def options(self, mask, prev_options=None):
         options = {
@@ -174,7 +174,7 @@ class MixModOptionsSchedulerNode:
 
     RETURN_TYPES = ("OPTIONS",)
     FUNCTION = "options"
-    CATEGORY = "mixmod/conditioning"    
+    CATEGORY = "mixmod/options"    
 
     def options(self, start_step, end_step, prev_options=None):
         options = {
@@ -199,7 +199,7 @@ class MixModOptionsScaleNode:
 
     RETURN_TYPES = ("OPTIONS",)
     FUNCTION = "options"
-    CATEGORY = "mixmod/conditioning"
+    CATEGORY = "mixmod/options"
 
     def options(self, scale_factor, prev_options=None):
         options = {
@@ -222,7 +222,7 @@ class MixModOptionsMaskNode:
 
     RETURN_TYPES = ("OPTIONS",)
     FUNCTION = "options"
-    CATEGORY = "mixmod/conditioning"
+    CATEGORY = "mixmod/options"
 
     def options(self, mask, prev_options=None):
         options = {
@@ -249,7 +249,7 @@ class MixModStyleInjectionGuiderNode:
 
     RETURN_TYPES = ("GUIDER",)
     FUNCTION = "create_guider"
-    CATEGORY = "mixmod/conditioning"
+    CATEGORY = "mixmod/special"
 
     def create_guider(self, component, image, noise_weight=1.0, start_step=4, end_step=-1):
         guider = MixModGuider(component, mode="styleinjection", image=image, noise_weight=noise_weight, start_step=start_step, end_step=end_step)
@@ -267,7 +267,7 @@ class MixModFFTGuiderNode:
 
     RETURN_TYPES = ("GUIDER",)
     FUNCTION = "create_guider"
-    CATEGORY = "mixmod/conditioning"
+    CATEGORY = "mixmod/special"
 
     def create_guider(self, component, mode="team", ratio=1.0):
         # This is a placeholder for the actual guider implementation
@@ -287,7 +287,7 @@ class MixModBandFFTGuiderNode:
 
     RETURN_TYPES = ("GUIDER",)
     FUNCTION = "create_guider"
-    CATEGORY = "mixmod/conditioning"
+    CATEGORY = "mixmod/special"
 
     def create_guider(self, component, bands=2):
         # This is a placeholder for the actual guider implementation
@@ -309,7 +309,7 @@ class MixModDynamicMaskGuiderNode:
 
     RETURN_TYPES = ("GUIDER",)
     FUNCTION = "create_guider"
-    CATEGORY = "mixmod/conditioning"
+    CATEGORY = "mixmod/special"
 
     def create_guider(self, component, decay_factor=0.9, threshold=0.1, blur_sigma=0.5):
         guider = MixModGuider(component, mode="dynamic_mask", decay_factor=decay_factor, threshold=threshold, blur_sigma=blur_sigma)
@@ -328,7 +328,7 @@ class MixModDynamicMaskAlternativeGuiderNode:
 
     RETURN_TYPES = ("GUIDER",)
     FUNCTION = "create_guider"
-    CATEGORY = "mixmod/conditioning"
+    CATEGORY = "mixmod/special"
 
     def create_guider(self, component, threshold=0.1, blur_sigma=0.5, invert=False):
         guider = MixModGuider(component, mode="dynamic_mask_alternative", threshold=threshold, blur_sigma=blur_sigma, invert=invert)
@@ -350,7 +350,7 @@ class MixModDepthGuiderNode:
 
     RETURN_TYPES = ("GUIDER",)
     FUNCTION = "create_guider"
-    CATEGORY = "mixmod/conditioning"
+    CATEGORY = "mixmod/special"
 
     def create_guider(self, component, sharpness=0.0, invert=False, start=0):
         guider = MixModGuider(component, mode="foreground_background", sharpness=sharpness, invert=invert, start=start)
@@ -370,7 +370,7 @@ class MixModHighResGuiderNode:
 
     RETURN_TYPES = ("GUIDER",)
     FUNCTION = "create_guider"
-    CATEGORY = "mixmod/conditioning"
+    CATEGORY = "mixmod/special"
 
     def create_guider(self, component, ratio=0.5, start_step=0, end_step=-1, mode="team", image=None):
         # Convert end_step = -1 to None for the wrapper function
