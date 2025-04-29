@@ -2,17 +2,12 @@
 
 A custom node extension for ComfyUI that allows mixing multiple models during the sampling process for enhanced image generation.
 
-## Please share workflows or good combinations here!
-
 ## Description
-
-VRAM requirement: Fitting two or multiple models. I think around 12gb is minimum for two sdxl.
 
 ComfyUI-MixMod provides a powerful way to combine multiple models during stable diffusion sampling. This extension introduces two primary mixing modes:
 
 - **Team Mode**: Combines multiple models by weighted averaging of their predictions and applying their respective guidance scales.
-- If the models disagree on tags and prompts it will get bad, you have to prompt so both model are roughly on one page.
-- **2Model FFT Mode**: (EXPERIMENTAL) Splits the frequency domain between two models, using one model for low frequencies and another for high frequencies. Last model in the chain decides the split weight.
+- **2Model FFT Mode**: Splits the frequency domain between two models, using one model for low frequencies and another for high frequencies.
 
 ## Features
 
@@ -21,13 +16,6 @@ ComfyUI-MixMod provides a powerful way to combine multiple models during stable 
 - Set individual guidance scales (CFG) for each model
 - Frequency domain splitting for controlling different image characteristics
 - Chain multiple components together to create complex model combinations
-
-## Roadmap
-
-- Add more modes
-- Better lora support
-- Make it upscale better/ fix resolution
-- Make this work with SD1.5, Flux and other models
 
 ## Installation
 
@@ -90,30 +78,45 @@ Here's a simple workflow to mix two models:
         │                             │
         ▼                             ▼
 ┌───────────────────────┐    ┌───────────────────────┐
-│ MixMod Component A    │----│ MixMod Component B    │
+│ MixMod Component A    │    │ MixMod Component B    │
 │ weight: 0.6, cfg: 7.5 │    │ weight: 0.4, cfg: 8.0 │
-└────────┬──────────────┘    └───────────────────────┘
-         │
-         ▼
-┌──────────────────┐
-│ MixMod Guider    │
-│ mode: team       │
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────┐
-│ KSampler         │
-│ (use as guider)  │
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────┐
-│ VAE Decode       │
-└────────┬─────────┘
-         │
-         ▼
-      Image
+└───────────┬───────────┘    └───────────┬───────────┘
+            │                            │
+            └────────────┬───────────────┘
+                         │
+                         ▼
+                ┌──────────────────┐
+                │ MixMod Guider    │
+                │ mode: team       │
+                └────────┬─────────┘
+                         │
+                         ▼
+                ┌──────────────────┐
+                │ KSampler         │
+                │ (use as guider)  │
+                └────────┬─────────┘
+                         │
+                         ▼
+                ┌──────────────────┐
+                │ VAE Decode       │
+                └────────┬─────────┘
+                         │
+                         ▼
+                      Image
 ```
+
+### Frequency Split Mixing (2model_fft)
+
+For frequency domain splitting:
+1. Create two "MixMod Guider Component" nodes
+2. Connect different models to each component
+3. Use the weight of the first model to control the frequency split point
+4. Set the mode to "2model_fft" in the "MixMod Guider" node
+
+## How It Works
+
+- **Team Mode**: Combines multiple models by computing a weighted average of their unconditioned predictions, then adds the guided differences according to each model's CFG value.
+- **2model_fft**: Transforms predictions to the frequency domain using FFT, applies the first model to low frequencies and the second model to high frequencies based on a split ratio derived from the first model's weight.
 
 ## Compatibility
 
@@ -128,12 +131,10 @@ Here's a simple workflow to mix two models:
 - Experiment with different CFG values for each model to control its influence
 - For models with very different styles, start with lower weights for specialty models
 
-Example with Ponyv6 and NoobAI:
-
-Only Pony, Pony+Noob, Only Noob
-![image](https://github.com/user-attachments/assets/0108c1e4-bf3c-4060-9860-47ae8a52b627)
-
-
 ## Credits
 
 Created by Kantsche
+
+## License
+
+[Add license information here] 
