@@ -1,5 +1,6 @@
 # ComfyUI-MixMod
 
+
 ComfyUI-MixMod provides a powerful way to combine multiple models during sampling.
 
 VRAM requirement: Fitting two or multiple models. I think around 12gb is minimum for two sdxl.
@@ -9,6 +10,8 @@ VRAM requirement: Fitting two or multiple models. I think around 12gb is minimum
 - Mix multiple models during sampling
 - Scheduling everything
 - Multiple experimental modes.
+
+## Please share cool workflows you find under discussion, this stuff is really experimental and still needs discoveries.
 
 ## Installation
 
