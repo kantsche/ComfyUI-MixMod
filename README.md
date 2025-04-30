@@ -32,7 +32,7 @@ git clone https://github.com/Kantsche/comfyui-mixmod.git
 
 ## Compatibility
 
-- Tested with SD 1.5, SDXL, and SD 2.x models
+- Tested with SD 1.5 and SDXL
 - Works with different model architectures (base, inpainting, etc.)
 
 Example with Ponyv6 and NoobAI:
