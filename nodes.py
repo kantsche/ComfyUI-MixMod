@@ -65,7 +65,7 @@ class MixModGuiderComponentPipelineNode:
             "weight": base_weight,
             "cfg": cfg,
             "options": options,
-            "prev": prev_component
+            "prev": prev_component,
         }
         return (component,)
     
@@ -76,7 +76,7 @@ class MixModPipelineNode:
         return {"required": 
                     {"model": ("MODEL",),  
                      "positive": ("CONDITIONING",),
-                     "negative": ("CONDITIONING",),
+                     "negative": ("CONDITIONING",)
                     }
                 }
     
@@ -387,6 +387,7 @@ NODE_CLASS_MAPPINGS = {
     "MixModGuiderNode": MixModGuiderNode,
     "MixModFFTGuiderNode": MixModFFTGuiderNode,
     "MixModBandFFTGuiderNode": MixModBandFFTGuiderNode,
+    "MixModHighResGuiderNode": MixModHighResGuiderNode,
     "MixModOptionsMaskNode": MixModOptionsMaskNode,
     "MixModOptionsSchedulerNode": MixModOptionsSchedulerNode,
     "MixModOptionsScaleNode": MixModOptionsScaleNode,
@@ -402,6 +403,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "MixModGuiderNode": "MixMod Guider",
     "MixModFFTGuiderNode": "MixMod FFT Guider",
     "MixModBandFFTGuiderNode": "MixMod Band FFT Guider",
+    "MixModHighResGuiderNode": "MixMod High Res Guider",
     "MixModOptionsMaskNode": "MixMod Options Mask",
     "MixModOptionsSchedulerNode": "MixMod Options Scheduler",
     "MixModOptionsScaleNode": "MixMod Options Scale",

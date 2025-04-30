@@ -99,10 +99,13 @@ def load_taesd(name):
     elif name == "taef1":
         sd["vae_scale"] = torch.tensor(0.3611)
         sd["vae_shift"] = torch.tensor(0.1159)
-    return sd
+    
+    vae = comfy.sd.VAE(sd=sd)
+    return vae
 
 def load_vae(name):
-    vae = comfy.utils.load_torch_file(folder_paths.get_full_path_or_raise("vae", name))
+    vae = comfy.utils.load_torch_file(folder_paths.get_full_path_or_raise("vae", name),device=model_management.get_torch_device())
+    vae = comfy.sd.VAE(sd=vae)
     return vae
 
 def create_depth_map(latent_image, depth_model, resolution, **kwargs):
@@ -383,6 +386,47 @@ def create_noise_injection_wrapper(latent, noise_weight=1.0, callback=None):
         
     return wrapper
 
+def create_model_wrapper(type, vae15, vaexl):
+    """
+    Creates a wrapper that takes an input image, converts it to latent space,
+    noises it to match the current timestep/sigma, and injects its noise prediction.
+    
+    Args:
+        image: Input image to inject (tensor in pixel space)
+        vae: VAE model for encoding to latent space
+        noise_weight: Weight of the injected noise prediction (0-1)
+        
+    Returns:
+        A function wrapper to use as model_options['model_function_wrapper']
+
+        
+    """
+    def wrapper(apply_model_func, args_dict):
+        # Extract args
+        input_x = args_dict["input"]
+        timestep = args_dict["timestep"] 
+        c = args_dict["c"]
+        
+        # Noise the image latent to match current noise level
+        if type == "sd15":
+            # Get device from input_x
+            device = input_x.device
+            
+            image_latent = convert_latent_format(input_x, "sdxl", "sd15", device)
+            
+            #
+            model_output = apply_model_func(image_latent, timestep, **c)
+            model_output = model_output.to(device)
+            
+            final_output = convert_latent_format(model_output, "sd15", "sdxl", device)
+            
+            return final_output
+        
+        # Fall back to original model if type is not SD15
+        return apply_model_func(input_x, timestep, **c)
+        
+    return wrapper
+
 def sumweights(weights):
     weight_sum = sum(weights)
         
@@ -390,3 +434,95 @@ def sumweights(weights):
     if weight_sum > 0:
         weights = [w / weight_sum for w in weights]
     return weights
+
+def convert_latent_format(latent, source_format="sd15", target_format="sdxl", device=None):
+    """
+    Converts latents between SD1.5 and SDXL formats using their RGB factors and scales.
+    
+    Args:
+        latent: Input latent tensor (B, 4, H, W)
+        source_format: Source format ("sd15" or "sdxl")
+        target_format: Target format ("sd15" or "sdxl")
+        device: Device to use (if None, uses the latent's device)
+        
+    Returns:
+        Converted latent tensor (B, 4, H, W)
+    """
+    if source_format == target_format:
+        return latent
+    
+    if device is None:
+        device = latent.device
+    
+    # Define format parameters
+    sd15_scale = 0.18215
+    sdxl_scale = 0.13025
+    
+    sd15_factors = torch.tensor([
+        [ 0.3512,  0.2297,  0.3227],
+        [ 0.3250,  0.4974,  0.2350],
+        [-0.2829,  0.1762,  0.2721],
+        [-0.2120, -0.2616, -0.7177]
+    ], device=device)
+    
+    sdxl_factors = torch.tensor([
+        [ 0.3651,  0.4232,  0.4341],
+        [-0.2533, -0.0042,  0.1068],
+        [ 0.1076,  0.1111, -0.0362],
+        [-0.3165, -0.2492, -0.2188]
+    ], device=device)
+    
+    sdxl_bias = torch.tensor([0.1084, -0.0175, -0.0011], device=device)
+    
+    # Unscale the latent based on source format
+    if source_format == "sd15":
+        unscaled_latent = latent * sd15_scale
+    else:  # sdxl
+        unscaled_latent = latent * sdxl_scale
+    
+    # Get dimensions
+    B, C, H, W = unscaled_latent.shape
+    
+    # For simplicity, we'll process each sample in the batch separately
+    target_latent = torch.zeros_like(unscaled_latent)
+    
+    for b in range(B):
+        # Get the current sample
+        sample = unscaled_latent[b]  # [4, H, W]
+        
+        # Reshape to [4, H*W]
+        sample_flat = sample.reshape(4, -1)
+        
+        # Convert to RGB representation
+        if source_format == "sd15":
+            # Calculate pseudo-inverse (4x3 matrix becomes 3x4)
+            sd15_pinv = torch.pinverse(sd15_factors)
+            # Transform from latent to RGB: [3x4] x [4, H*W] -> [3, H*W]
+            rgb = torch.matmul(sd15_pinv, sample_flat)
+        else:  # sdxl
+            sdxl_pinv = torch.pinverse(sdxl_factors)
+            # Transform from latent to RGB: [3x4] x [4, H*W] -> [3, H*W]
+            rgb = torch.matmul(sdxl_pinv, sample_flat)
+            # Remove bias (for each channel)
+            for i in range(3):
+                rgb[i] = rgb[i] - sdxl_bias[i]
+        
+        # Convert RGB to target latent space
+        if target_format == "sd15":
+            # RGB to SD1.5 latent: [4x3] x [3, H*W] -> [4, H*W]
+            out = torch.matmul(sd15_factors, rgb)
+            # Apply scale
+            out = out / sd15_scale
+        else:  # sdxl
+            # Add bias
+            for i in range(3):
+                rgb[i] = rgb[i] + sdxl_bias[i]
+            # RGB to SDXL latent: [4x3] x [3, H*W] -> [4, H*W]
+            out = torch.matmul(sdxl_factors, rgb)
+            # Apply scale
+            out = out / sdxl_scale
+        
+        # Reshape back to [4, H, W] and store
+        target_latent[b] = out.reshape(4, H, W)
+    
+    return target_latent

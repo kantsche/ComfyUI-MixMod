@@ -1,5 +1,6 @@
 import torch
 import comfy.samplers
+import comfy.sampler_helpers
 import comfy.utils
 import logging
 import torch.nn.functional as F
@@ -8,7 +9,7 @@ from .utils import sumweights
 # Initialize other necessary attributes
 
 import comfy.model_management as model_management
-from .utils import load_taesd, ensure_model, create_adaptive_low_res_model_wrapper, create_noise_injection_wrapper, load_vae
+from .utils import load_taesd, ensure_model, create_adaptive_low_res_model_wrapper, create_model_wrapper, load_vae
 
 
 # Import mixing functions
@@ -35,35 +36,42 @@ class MixModGuider(comfy.samplers.CFGGuider):
             try:
                 from custom_nodes.comfyui_controlnet_aux.src.custom_controlnet_aux.depth_anything import DepthAnythingDetector
                 self.depth_model = DepthAnythingDetector.from_pretrained().to(model_management.get_torch_device())
-                self.vae = comfy.sd.VAE(sd=load_taesd("taesdxl"))
+                self.vae = load_taesd("taesdxl")
             except Exception as e:
                 self.mode = "team"
                 raise Exception("Please install Comfyui ControlNet Aux custom node. Falling back to team mode.")
             
         if(self.mode == "styleinjection" and not self.kwargs.get("image", None) is None):
-            self.vae = comfy.sd.VAE(sd=load_vae("fixFP16ErrorsSDXLLowerMemoryUse_v10.safetensors"))
+            self.vae = load_vae("fixFP16ErrorsSDXLLowerMemoryUse_v10.safetensors")
             
             self.noiseinjection_latent = self.vae.encode(self.kwargs.get("image", None))
-            
+        
             
         self.models = []
         self.weights = []
         self.cfgs = []
         self.masks = []  # Initialize empty masks list
+        self.types = []
+
         self.step = 0
         self.total_steps = 0
         self.start_steps = []
         self.end_steps = []
-        self.scale_factors = []
+        
         self.options = []
-        self.mask_history = None  # For tracking dynamic masks between steps
+        self.scale_factors = []
         self.decay_factor = kwargs.get("decay_factor", 0.9)  # Dynamic mask decay factor
         self.threshold = kwargs.get("threshold", 0.1)  # Dynamic mask threshold
+
         self.active_masks = []
         self.active_weights = []
         self.active_cfgs = []
         self.uncond_decays = []
+
+
         self.foreground_background_masks = []
+        self.mask_history = None  # For tracking dynamic masks between steps
+
         self.seed = -1
         # Process component chain
         current = component
@@ -106,8 +114,6 @@ class MixModGuider(comfy.samplers.CFGGuider):
         self.active_weights = []
         self.active_cfgs = []
         self.active_uncond_decays = []
-        def latent_callback(latent):
-            self.noiseinjection_latent = latent
         for i in range(len(self.models)):
             cond = [self.conds.get(f"positive_{i+1}", None), self.conds.get(f"negative_{i+1}", None)]
             if(self.start_steps[i] <= self.step <= self.end_steps[i] or self.end_steps[i] == -1):
@@ -116,19 +122,12 @@ class MixModGuider(comfy.samplers.CFGGuider):
                         min_scale_factor=self.scale_factors[i], 
                         max_scale_factor=self.scale_factors[i]
                     )
-                    
-                    ensure_model(self.models[i],"normal")
-                    pred.append(comfy.samplers.calc_cond_batch(self.prepared_models[i][0], cond, x, timestep, model_options))
-                    del model_options["model_function_wrapper"]
-                elif(self.mode == "styleinjection" and self.kwargs.get("image", None) is not None and i == 1 and self.kwargs.get("start_step", 4) <= self.step <= self.kwargs.get("end_step", 7)):
-                    #calculate noise weight, decreasing from self.kwargs.get("noise_weight", 1.0) to 0 between start_step and end_step
-                    noise_weight = self.kwargs.get("noise_weight", 1.0) - (self.step - self.kwargs.get("start_step", 4)) * (self.kwargs.get("noise_weight", 1.0) - 0) / (self.kwargs.get("end_step", 7) - self.kwargs.get("start_step", 4))
-                    model_options["model_function_wrapper"] = create_noise_injection_wrapper(self.noiseinjection_latent, noise_weight, latent_callback)
                     ensure_model(self.models[i],"normal")
                     pred.append(comfy.samplers.calc_cond_batch(self.prepared_models[i][0], cond, x, timestep, model_options))
                     del model_options["model_function_wrapper"]
                 else:
                     ensure_model(self.models[i],"normal")
+
                     pred.append(comfy.samplers.calc_cond_batch(self.prepared_models[i][0], cond, x, timestep, model_options))
                 
                 self.active_masks.append(self.masks[i])
@@ -153,14 +152,6 @@ class MixModGuider(comfy.samplers.CFGGuider):
         postcond = torch.zeros_like(pred[0][0])
 
         self.active_weights = sumweights(self.active_weights)
-        """ if(len(pred) == 1 and not self.mode == "foreground_background"):
-            mix = pred[0][1] + (pred[0][0] - pred[0][1]) * self.cfgs[0]
-            for fn in model_options.get("sampler_post_cfg_function", []):
-                args = {"denoised": mix, "cond": self.conds.get(f"positive_1", None), "uncond": self.conds.get(f"negative_1", None), "cond_scale": self.cfgs[0], "model": model, "uncond_denoised": pred[0][1], "cond_denoised": pred[0][0],
-                        "sigma": timestep, "model_options": model_options, "input": x}
-                mix = fn(args)
-            self.step += 1   
-            return mix """
         if(self.mode == "team"):
             if any(mask is not None for mask in self.active_masks):
                 mix, postuncond = mix_masked(pred, self.active_weights, self.active_cfgs, self.active_masks,)
@@ -223,7 +214,7 @@ class MixModGuider(comfy.samplers.CFGGuider):
         device = self.models[0].load_device
         
         # Prepare the models, conditions, and loaded models for each model
-        prepared_models = []
+
         all_loaded_models = []
         
         for i, model in enumerate(self.models):
@@ -269,9 +260,10 @@ class MixModGuider(comfy.samplers.CFGGuider):
             # Clean up all models
             for model in self.models:
                 model.cleanup()
-            del self.inner_model
             # Clean up models and loaded models
             comfy.sampler_helpers.cleanup_models(self.conds, all_loaded_models)
+            self.prepared_models = []
+            del all_loaded_models
             
             
         return output
@@ -288,6 +280,68 @@ class MixModGuider(comfy.samplers.CFGGuider):
             # Call the original callback if provided
             if original_callback is not None:
                 original_callback(step, x0, x, total_steps)
+
+        if latent_image is not None and torch.count_nonzero(latent_image) > 0: #Don't shift the empty latent image.
+            latent_image = self.inner_model.process_latent_in(latent_image)
+
+        # Process each cond with each prepared inner model separately
+        processed_conds = {}
+        for i, (inner_model, _) in enumerate(self.prepared_models):
+            # Get the conditions for this model (positive_i, negative_i)
+            model_conds = {k: v for k, v in self.conds.items() if k.endswith(f"_{i+1}")}
+            
+            # Process conditions with this model
+            processed_model_conds = comfy.samplers.process_conds(inner_model, noise, model_conds, device, latent_image, denoise_mask, seed)
+            
+            # Add to processed conditions
+            processed_conds.update(processed_model_conds)
         
-        # Pass our wrapped callback to the parent method
-        return comfy.samplers.CFGGuider.inner_sample(self, noise, latent_image, device, sampler, sigmas, denoise_mask, wrapped_callback, disable_pbar, seed)
+        # Merge back into self.conds
+        self.conds = processed_conds
+
+        extra_model_options = comfy.model_patcher.create_model_options_clone(self.model_options)
+        extra_model_options.setdefault("transformer_options", {})["sample_sigmas"] = sigmas
+        extra_args = {"model_options": extra_model_options, "seed": seed}
+
+        executor = comfy.patcher_extension.WrapperExecutor.new_class_executor(
+            sampler.sample,
+            sampler,
+            comfy.patcher_extension.get_all_wrappers(comfy.patcher_extension.WrappersMP.SAMPLER_SAMPLE, extra_args["model_options"], is_model_options=True)
+        )
+        samples = executor.execute(self, sigmas, extra_args, wrapped_callback, noise, latent_image, denoise_mask, disable_pbar)
+        return samples
+
+    def sample(self, noise, latent_image, sampler, sigmas, denoise_mask=None, callback=None, disable_pbar=False, seed=None):
+        if sigmas.shape[-1] == 0:
+            return latent_image
+
+        self.conds = {}
+        for k in self.original_conds:
+            self.conds[k] = list(map(lambda a: a.copy(), self.original_conds[k]))
+        comfy.samplers.preprocess_conds_hooks(self.conds)
+
+        try:
+            orig_model_options = self.model_options
+            self.model_options = comfy.model_patcher.create_model_options_clone(self.model_options)
+            # if one hook type (or just None), then don't bother caching weights for hooks (will never change after first step)
+            orig_hook_mode = self.model_patcher.hook_mode
+            if comfy.samplers.get_total_hook_groups_in_conds(self.conds) <= 1:
+                self.model_patcher.hook_mode = comfy.hooks.EnumHookMode.MinVram
+                
+            comfy.sampler_helpers.prepare_model_patcher(self.model_patcher, self.conds, self.model_options)
+            
+            comfy.samplers.filter_registered_hooks_on_conds(self.conds, self.model_options)
+            executor = comfy.patcher_extension.WrapperExecutor.new_class_executor(
+                self.outer_sample,
+                self,
+                comfy.patcher_extension.get_all_wrappers(comfy.patcher_extension.WrappersMP.OUTER_SAMPLE, self.model_options, is_model_options=True)
+            )
+            output = executor.execute(noise, latent_image, sampler, sigmas, denoise_mask, callback, disable_pbar, seed)
+        finally:
+            comfy.samplers.cast_to_load_options(self.model_options, device=self.model_patcher.offload_device)
+            self.model_options = orig_model_options
+            self.model_patcher.hook_mode = orig_hook_mode
+            self.model_patcher.restore_hook_patches()
+
+        del self.conds
+        return output
