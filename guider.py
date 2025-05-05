@@ -9,7 +9,7 @@ from .utils import sumweights
 # Initialize other necessary attributes
 
 import comfy.model_management as model_management
-from .utils import load_taesd, ensure_model, create_adaptive_low_res_model_wrapper, create_model_wrapper, load_vae
+from .utils import load_taesd, ensure_model, create_adaptive_low_res_model_wrapper, create_model_wrapper, load_vae, normalize_model_predictions
 
 
 # Import mixing functions
@@ -83,6 +83,7 @@ class MixModGuider(comfy.samplers.CFGGuider):
                 self.model_options = self.models[0].model_options
             self.weights.append(current.get("weight", 1.0))
             self.cfgs.append(current.get("cfg", 7.5))
+            self.types.append(current.get("type", "eps"))
             opt = current.get("options", {})
             options = {}
             while opt is not None:
@@ -114,6 +115,7 @@ class MixModGuider(comfy.samplers.CFGGuider):
         self.active_weights = []
         self.active_cfgs = []
         self.active_uncond_decays = []
+        self.active_types = []
         for i in range(len(self.models)):
             cond = [self.conds.get(f"positive_{i+1}", None), self.conds.get(f"negative_{i+1}", None)]
             if(self.start_steps[i] <= self.step <= self.end_steps[i] or self.end_steps[i] == -1):
@@ -134,7 +136,7 @@ class MixModGuider(comfy.samplers.CFGGuider):
                 self.active_weights.append(self.weights[i])
                 self.active_cfgs.append(self.cfgs[i])
                 self.active_uncond_decays.append(self.uncond_decays[i])
-
+                self.active_types.append(self.types[i])
         if not pred:
             logging.warning(f"No models were active at step {self.step}, using default model 0")
             cond = [self.conds.get(f"positive_1", None), self.conds.get(f"negative_1", None)]
@@ -143,6 +145,7 @@ class MixModGuider(comfy.samplers.CFGGuider):
             self.active_weights.append(self.weights[0])
             self.active_cfgs.append(self.cfgs[0])
             self.active_uncond_decays.append(self.uncond_decays[0])
+            self.active_types.append(self.types[0])
         return self.mix_function(self.prepared_models[0][0], pred, x, timestep, model_options, seed)
 
     def mix_function(self, model, pred, x, timestep, model_options, seed):
@@ -151,6 +154,7 @@ class MixModGuider(comfy.samplers.CFGGuider):
         postuncond = torch.zeros_like(pred[0][1])
         postcond = torch.zeros_like(pred[0][0])
 
+        
         self.active_weights = sumweights(self.active_weights)
         if(self.mode == "team"):
             if any(mask is not None for mask in self.active_masks):

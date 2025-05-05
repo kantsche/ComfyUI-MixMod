@@ -180,6 +180,56 @@ def process_mask(mask, H, W, device):
 
     return mask
 
+def normalize_model_predictions(pred, model_types, sigma=None):
+    """
+    Normalize predictions between different model types (flow, eps, v-prediction).
+    
+    Args:
+        pred: List of model predictions, each containing [conditional, unconditional]
+        model_types: List of model types ("FLOW", "EPS", "V_PREDICTION", etc.)
+        sigma: Current noise level (required for proper scaling)
+        
+    Returns:
+        normalized_pred: Normalized predictions that can be mixed together
+    """
+    normalized_pred = []
+    
+    if sigma is None:
+        print("Warning: sigma not provided for model prediction normalization. Using default scaling.")
+        sigma = torch.tensor(1.0, device=pred[0][0].device)
+    
+    for i, (cond, uncond) in enumerate(pred):
+        model_type = model_types[i].lower() if i < len(model_types) else "eps"
+        
+        if model_type == "flow":
+            # Flow models predict score function (gradient of log-likelihood)
+            # For proper mixing with noise-prediction models, we use:
+            # noise = -score * sigma
+            sigma_factor = sigma.view(sigma.shape[:1] + (1,) * (cond.ndim - 1))
+            
+            # Convert score to noise prediction with correct scaling relationship
+            normalized_cond = -cond * sigma_factor
+            normalized_uncond = -uncond * sigma_factor
+            
+        elif model_type == "v_prediction":
+            # V-prediction models predict velocity
+            # v = (x_t - α_t·x_0)/σ_t
+            # To convert v-prediction to noise prediction (ε):
+            # ε = v * σ
+            sigma_factor = sigma.view(sigma.shape[:1] + (1,) * (cond.ndim - 1))
+            
+            normalized_cond = cond * sigma_factor
+            normalized_uncond = uncond * sigma_factor
+            
+        else:  # EPS is the default
+            # EPS models predict noise directly - use as is
+            normalized_cond = cond
+            normalized_uncond = uncond
+            
+        normalized_pred.append([normalized_cond, normalized_uncond])
+    
+    return normalized_pred
+
 
 def create_adaptive_low_res_model_wrapper( min_scale_factor=0.5, max_scale_factor=1.0, start_step=0, end_step=None):
     """

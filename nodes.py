@@ -76,7 +76,7 @@ class MixModPipelineNode:
         return {"required": 
                     {"model": ("MODEL",),  
                      "positive": ("CONDITIONING",),
-                     "negative": ("CONDITIONING",)
+                     "negative": ("CONDITIONING",),
                     }
                 }
     
