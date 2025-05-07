@@ -55,6 +55,9 @@ Only Pony, Pony+Noob, Only Noob image
 ![image](https://github.com/user-attachments/assets/9853bf07-f5e2-405c-bf0d-2c6e2a836511)
 
 
+If you want to support the development and some finetunes:
+https://ko-fi.com/kantsche
+
 ## Credits
 
 Created by Kantsche
