@@ -35,7 +35,7 @@ git clone https://github.com/Kantsche/comfyui-mixmod.git
 
 ## Compatibility
 
-- Tested with SD 1.5 and SDXL
+- Tested with SD 1.5, SDXL and Pixart Sigma
 - Works with different model architectures (base, inpainting, etc.)
 
 
