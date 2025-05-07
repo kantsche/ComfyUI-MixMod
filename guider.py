@@ -9,8 +9,7 @@ from .utils import sumweights
 # Initialize other necessary attributes
 
 import comfy.model_management as model_management
-from .utils import load_taesd, ensure_model, create_adaptive_low_res_model_wrapper, create_model_wrapper, load_vae, normalize_model_predictions
-
+from .utils import load_taesd, ensure_model, create_adaptive_low_res_model_wrapper
 
 # Import mixing functions
 from .mixes.fft import mix_teamfft, mix_teamfft4freq, mix_2model_fft, mix_2m2f, mix_fft_overlap, mix_fft_full, mix_bandfft
@@ -41,11 +40,6 @@ class MixModGuider(comfy.samplers.CFGGuider):
                 self.mode = "team"
                 raise Exception("Please install Comfyui ControlNet Aux custom node. Falling back to team mode.")
             
-        if(self.mode == "styleinjection" and not self.kwargs.get("image", None) is None):
-            self.vae = load_vae("fixFP16ErrorsSDXLLowerMemoryUse_v10.safetensors")
-            
-            self.noiseinjection_latent = self.vae.encode(self.kwargs.get("image", None))
-        
             
         self.models = []
         self.weights = []
@@ -60,13 +54,11 @@ class MixModGuider(comfy.samplers.CFGGuider):
         
         self.options = []
         self.scale_factors = []
-        self.decay_factor = kwargs.get("decay_factor", 0.9)  # Dynamic mask decay factor
         self.threshold = kwargs.get("threshold", 0.1)  # Dynamic mask threshold
 
         self.active_masks = []
         self.active_weights = []
         self.active_cfgs = []
-        self.uncond_decays = []
 
 
         self.foreground_background_masks = []
@@ -93,12 +85,20 @@ class MixModGuider(comfy.samplers.CFGGuider):
             self.start_steps.append(options.get("start_step", 0))
             self.end_steps.append(options.get("end_step", -1))
             self.masks.append(options.get("mask", None))
-            self.uncond_decays.append(options.get("uncond_decay", 1.0))
             # Add to original_conds with indexed keys
             idx = len(self.models)
             conds.update({f"positive_{idx}": current["positive"], f"negative_{idx}": current["negative"]})
             
             current = current.get("prev")
+
+
+        print(self.models)
+        print(self.weights)
+        print(self.cfgs)
+        print(self.types)
+        print(self.scale_factors)
+        print(self.start_steps)
+        print(self.end_steps)
         
         
         self.inner_set_conds(conds)
@@ -114,7 +114,6 @@ class MixModGuider(comfy.samplers.CFGGuider):
         self.active_masks = []
         self.active_weights = []
         self.active_cfgs = []
-        self.active_uncond_decays = []
         self.active_types = []
         for i in range(len(self.models)):
             cond = [self.conds.get(f"positive_{i+1}", None), self.conds.get(f"negative_{i+1}", None)]
@@ -135,7 +134,6 @@ class MixModGuider(comfy.samplers.CFGGuider):
                 self.active_masks.append(self.masks[i])
                 self.active_weights.append(self.weights[i])
                 self.active_cfgs.append(self.cfgs[i])
-                self.active_uncond_decays.append(self.uncond_decays[i])
                 self.active_types.append(self.types[i])
         if not pred:
             logging.warning(f"No models were active at step {self.step}, using default model 0")
@@ -144,7 +142,6 @@ class MixModGuider(comfy.samplers.CFGGuider):
             self.active_masks.append(self.masks[0])
             self.active_weights.append(self.weights[0])
             self.active_cfgs.append(self.cfgs[0])
-            self.active_uncond_decays.append(self.uncond_decays[0])
             self.active_types.append(self.types[0])
         return self.mix_function(self.prepared_models[0][0], pred, x, timestep, model_options, seed)
 
@@ -160,17 +157,14 @@ class MixModGuider(comfy.samplers.CFGGuider):
             if any(mask is not None for mask in self.active_masks):
                 mix, postuncond = mix_masked(pred, self.active_weights, self.active_cfgs, self.active_masks,)
             else:
-                mix, postuncond = mix_standard(pred, self.active_weights, self.active_cfgs, self.active_uncond_decays)
-
-        elif self.mode == "styleinjection":
-            mix, postuncond = mix_standard(pred, self.active_weights, self.active_cfgs)
+                mix, postuncond = mix_standard(pred, self.active_weights, self.active_cfgs)
 
         elif self.mode == "dynamic_mask":
-            mix, postuncond, new_masks = mix_dynamic_mask(pred, self.active_weights, self.active_cfgs, self.step, self.mask_history, self.decay_factor, self.threshold, self.kwargs.get("blur_sigma", 0.5))
+            mix, postuncond, new_masks = mix_dynamic_mask(pred, self.active_weights, self.active_cfgs, self.step, self.mask_history, self.kwargs.get("decay_factor", 0.9), self.threshold, self.kwargs.get("blur_sigma", 0.5))
             self.mask_history = new_masks  # Store the updated masks for next step
 
         elif self.mode == "dynamic_mask_alternative":
-            mix, postuncond = mix_dynamic_mask_alternative(pred, self.active_weights, self.active_cfgs, self.depth_model, self.threshold, self.kwargs.get("invert", False), self.kwargs.get("blur_sigma", 1.0))
+            mix, postuncond = mix_dynamic_mask_alternative(pred, self.active_weights, self.active_cfgs, self.depth_model, self.kwargs.get("threshold", 0.1), self.kwargs.get("invert", False), self.kwargs.get("blur_sigma", 1.0))
 
         elif self.mode == "foreground_background":
             if(self.step == 0):
@@ -313,7 +307,7 @@ class MixModGuider(comfy.samplers.CFGGuider):
             comfy.patcher_extension.get_all_wrappers(comfy.patcher_extension.WrappersMP.SAMPLER_SAMPLE, extra_args["model_options"], is_model_options=True)
         )
         samples = executor.execute(self, sigmas, extra_args, wrapped_callback, noise, latent_image, denoise_mask, disable_pbar)
-        return samples
+        return self.inner_model.process_latent_out(samples.to(torch.float32))
 
     def sample(self, noise, latent_image, sampler, sigmas, denoise_mask=None, callback=None, disable_pbar=False, seed=None):
         if sigmas.shape[-1] == 0:
