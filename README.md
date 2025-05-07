@@ -9,6 +9,7 @@ VRAM requirement: Fitting two or multiple models. I think around 12gb is minimum
 
 - Mix multiple models during sampling
 - SD1.5+SDXL (use https://huggingface.co/ostris/sdxl-sd1-vae-lora to align the latents)
+- SDXL+Pixart sigma for increased prompt adherence
 - Scheduling everything
 - Multiple experimental modes.
 
