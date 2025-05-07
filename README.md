@@ -3,7 +3,7 @@
 
 ComfyUI-MixMod provides a powerful way to combine multiple models during sampling.
 
-VRAM requirement: Fitting two or multiple models. I think around 12gb is minimum for two sdxl.
+VRAM requirement: Fitting two or multiple models.  Around 12gb is minimum for two sdxl. Around 16gb vram for sdxl+pixartsigma with a Q3 t5xxl encoder.
 
 ## Features
 
@@ -25,6 +25,7 @@ git clone https://github.com/Kantsche/comfyui-mixmod.git
 
 2. Restart ComfyUI if it's already running.
 
+
 ## Tips
 
 - Different models excel at different aspects - try mixing a detail-focused model with a composition-focused one
@@ -36,6 +37,16 @@ git clone https://github.com/Kantsche/comfyui-mixmod.git
 
 - Tested with SD 1.5 and SDXL
 - Works with different model architectures (base, inpainting, etc.)
+
+
+Example workflow with pixart sigma:
+![ShadowPCDisplay_n735IOn8Gu](https://github.com/user-attachments/assets/a053400d-2b8f-41de-8a44-c6b248867f07)
+
+It improves the prompt adherence of sdxl in general prompts:
+
+![ShadowPCDisplay_0d5BXStu6l](https://github.com/user-attachments/assets/2472d4e9-ed2d-4791-965a-3908003afe2a)
+
+
 
 Example with Ponyv6 and NoobAI:
 
