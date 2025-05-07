@@ -56,7 +56,7 @@ Only Pony, Pony+Noob, Only Noob image
 
 
 If you want to support the development and some finetunes:
-https://ko-fi.com/kantsche
+https://ko-fi.com/lodestonerock
 
 ## Credits
 
