@@ -37,6 +37,7 @@ git clone https://github.com/Kantsche/comfyui-mixmod.git
 
 - Tested with SD 1.5, SDXL and Pixart Sigma
 - Works with different model architectures (base, inpainting, etc.)
+- Only tested on Windows
 
 
 Example workflow with pixart sigma:
