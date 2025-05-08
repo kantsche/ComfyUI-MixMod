@@ -9,7 +9,7 @@ VRAM requirement: Fitting two or multiple models.  Around 12gb is minimum for tw
 
 - Mix multiple models during sampling
 - SD1.5+SDXL (use https://huggingface.co/ostris/sdxl-sd1-vae-lora to align the latents)
-- SDXL+Pixart sigma for increased prompt adherence
+- SDXL+Pixart sigma for increased prompt adherence, needs [GGUF](https://github.com/city96/ComfyUI-GGUF) and [ExtraModels](https://github.com/city96/ComfyUI_ExtraModels) for Comfyui
 - Scheduling everything
 - Multiple experimental modes.
 
