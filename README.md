@@ -3,7 +3,7 @@
 
 ComfyUI-MixMod provides a powerful way to combine multiple models during sampling.
 
-VRAM requirement: Fitting two or multiple models.  Around 12gb is minimum for two sdxl. Around 16gb vram for sdxl+pixartsigma with a Q3 t5xxl encoder.
+VRAM requirement: Around 8gb vram is minimum. You might need to replace some models with gguf, I got 1sdxl, 1sdxlgguf and pixart sigma with gguf te running on 8gb vram.
 
 ## Features
 
