@@ -1,0 +1,14 @@
+[project]
+name = "mixmod"
+description = "A custom node extension for ComfyUI that allows mixing multiple models during the sampling process for enhanced image generation."
+version = "1.0.0"
+license = {file = "LICENSE"}
+
+[project.urls]
+Repository = "https://github.com/kantsche/ComfyUI-MixMod"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "ComfyUI-MixMod"
+Icon = ""
